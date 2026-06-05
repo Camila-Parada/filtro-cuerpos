@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filtro de Cuerpos · Chile Íntimo</title>
+<style>
+  :root{
+    --bg:#11100c;
+    --panel:#1a1813;
+    --ink:#ece6d8;
+    --muted:#8f897a;
+    --line:#36322a;
+    --ok:#7fae6a;
+    --no:#c8694f;
+    --warn:#d4a843;
+    --accent:#d4a843;
+    --mono:'IBM Plex Mono',ui-monospace,'Courier New',monospace;
+    --serif:'Times New Roman',Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.5;
+    padding:28px;
+    background-image:radial-gradient(circle at 12% 8%, rgba(212,168,67,.04), transparent 40%);
+  }
+  header{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+  h1{font-family:var(--serif);font-size:30px;font-weight:700;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:2px}
+  .tag{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+
+  .status{margin:14px 0;padding:10px 14px;border:1px solid var(--line);background:var(--panel);font-size:12px}
+  .status b{color:var(--accent)}
+
+  .layout{display:grid;grid-template-columns:280px 1fr;gap:22px;margin-top:18px}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);padding:18px}
+  .panel h2{font-family:var(--serif);font-size:17px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+
+  label.field{display:block;margin-bottom:14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  label.field .val{float:right;color:var(--accent);font-weight:bold}
+  input[type=range]{width:100%;margin-top:6px;accent-color:var(--accent)}
+  .hint{font-size:10px;color:var(--muted);margin-top:2px;text-transform:none;letter-spacing:0;line-height:1.35}
+
+  .drop{
+    border:2px dashed var(--line);padding:30px 16px;text-align:center;cursor:pointer;
+    transition:.2s;color:var(--muted);font-size:12px;margin-bottom:14px
+  }
+  .drop:hover,.drop.over{border-color:var(--accent);color:var(--ink);background:rgba(212,168,67,.05)}
+
+  button{
+    font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1px;
+    background:var(--ink);color:var(--bg);border:none;padding:11px 16px;cursor:pointer;width:100%;
+    margin-bottom:8px;font-weight:bold;transition:.15s
+  }
+  button:hover{background:var(--accent)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  button.ghost:hover{border-color:var(--accent);color:var(--accent);background:transparent}
+
+  .counts{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
+  .pill{flex:1;min-width:70px;border:1px solid var(--line);padding:8px;text-align:center}
+  .pill .n{font-family:var(--serif);font-size:24px;display:block}
+  .pill .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .pill.ok .n{color:var(--ok)} .pill.no .n{color:var(--no)} .pill.t .n{color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .card{border:1px solid var(--line);background:var(--panel);overflow:hidden;display:flex;flex-direction:column}
+  .card.incluir{border-color:var(--ok)}
+  .card.descartar{border-color:var(--no);opacity:.78}
+  .cvwrap{position:relative;background:#000;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .cvwrap canvas{max-width:100%;max-height:100%;display:block}
+  .verdict{position:absolute;top:7px;left:7px;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;padding:3px 8px}
+  .verdict.incluir{background:var(--ok);color:#0c0f08}
+  .verdict.descartar{background:var(--no);color:#160a06}
+  .meta{padding:10px 11px;font-size:11px}
+  .meta .fn{color:var(--ink);word-break:break-all;margin-bottom:6px;font-size:10px}
+  .row{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;padding:1px 0}
+  .row b{color:var(--ink);font-weight:normal}
+  .crit{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+  .ck{font-size:9px;padding:2px 6px;border:1px solid var(--line);text-transform:uppercase;letter-spacing:.5px}
+  .ck.y{border-color:var(--ok);color:var(--ok)}
+  .ck.n{border-color:var(--no);color:var(--no)}
+  .encbadge{font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-top:6px;display:block}
+
+  footer{margin-top:30px;border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:10px;line-height:1.6}
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .barwrap{height:4px;background:var(--line);margin:8px 0;display:none}
+  .bar{height:100%;background:var(--accent);width:0;transition:.2s}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Filtro de Cuerpos</h1>
+    <div class="sub">Detección local · sin servidor · sin límite</div>
+  </div>
+  <div class="tag">Chile Íntimo · Taller DATA 01-2026</div>
+</header>
+
+<div class="status" id="status"><span class="spin"></span>Cargando modelo de detección (COCO-SSD)…</div>
+
+<div class="layout">
+  <!-- CONTROLES -->
+  <div>
+    <div class="panel">
+      <h2>Parámetros</h2>
+
+      <label class="field">Confianza mínima de detección <span class="val" id="vConf">0.50</span>
+        <input type="range" id="conf" min="0.2" max="0.9" step="0.05" value="0.5">
+        <div class="hint">Qué tan segura debe estar la IA de que es una persona. Más alto = menos falsos positivos.</div>
+      </label>
+
+      <label class="field">Cobertura mín. para "protagonista" <span class="val" id="vCov">12%</span>
+        <input type="range" id="cov" min="2" max="50" step="1" value="12">
+        <div class="hint">% del área de la imagen que debe ocupar la persona principal. Si ocupa menos, el cuerpo es secundario → descarta.</div>
+      </label>
+
+      <label class="field">Umbral cuerpo completo <span class="val" id="vFull">70%</span>
+        <input type="range" id="full" min="40" max="95" step="5" value="70">
+        <div class="hint">Altura de la persona respecto a la foto para considerarla "cuerpo completo".</div>
+      </label>
+
+      <label class="field">Umbral detalle / zoom <span class="val" id="vZoom">85%</span>
+        <input type="range" id="zoom" min="50" max="98" step="1" value="85">
+        <div class="hint">Si una sola caja ocupa más de este % del área, se considera detalle/zoom (mano, rostro muy cercano).</div>
+      </label>
+
+      <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+      <label class="field" style="margin-bottom:8px">
+        <input type="checkbox" id="reqSolo" checked style="accent-color:var(--accent)"> Exigir persona sola
+        <div class="hint">Si está activo, descarta toda foto con 2+ personas.</div>
+      </label>
+      <label class="field">
+        <input type="checkbox" id="reqProt" checked style="accent-color:var(--accent)"> Exigir cuerpo protagonista
+        <div class="hint">Si está activo, descarta fotos donde la persona ocupa menos que la cobertura mínima.</div>
+      </label>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h2>Lote</h2>
+      <div class="drop" id="drop">Arrastra imágenes aquí<br>o haz clic para elegir<br><span style="font-size:10px">(JPG / PNG · sin límite)</span></div>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+      <button id="analyze" disabled>Analizar lote</button>
+      <button id="csv" class="ghost" disabled>Exportar CSV</button>
+      <button id="clear" class="ghost" disabled>Limpiar</button>
+      <div class="barwrap" id="barwrap"><div class="bar" id="bar"></div></div>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div>
+    <div class="counts">
+      <div class="pill t"><span class="n" id="cTotal">0</span><span class="l">Total</span></div>
+      <div class="pill ok"><span class="n" id="cIn">0</span><span class="l">Incluir</span></div>
+      <div class="pill no"><span class="n" id="cOut">0</span><span class="l">Descartar</span></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<footer>
+  <b>Cómo se decide cada criterio (todo medible):</b><br>
+  · <b>Persona sola</b> = nº de cajas "person" detectadas = 1.<br>
+  · <b>Cuerpo protagonista</b> = la persona principal cubre ≥ cobertura mínima del área de la imagen.<br>
+  · <b>Encuadre</b> = se clasifica por altura relativa de la caja: COMPLETO (≥ umbral cuerpo completo), MEDIO CUERPO (entre 40% y ese umbral), PRIMER PLANO (&lt;40% de alto pero alta cobertura), DETALLE/ZOOM (una caja sola supera el umbral de zoom).<br>
+  · Las imágenes nunca salen de tu equipo: la detección corre 100% en el navegador.<br>
+  <span style="color:var(--muted)">Nota: COCO-SSD detecta "persona", no identifica quién es la titular. El encuadre por caja es orientativo; calibra los umbrales con unas fotos de prueba.</span>
+</footer>
+
+<script>
+let model=null, results=[];
+const $=id=>document.getElementById(id);
+const sliders=[['conf','vConf',v=>(+v).toFixed(2)],['cov','vCov',v=>v+'%'],['full','vFull',v=>v+'%'],['zoom','vZoom',v=>v+'%']];
+sliders.forEach(([id,out,fmt])=>{$(id).addEventListener('input',e=>{$(out).textContent=fmt(e.target.value); if(results.length) reclassify();});});
+['reqSolo','reqProt'].forEach(id=>$(id).addEventListener('change',()=>{if(results.length) reclassify();}));
+
+// Carga un script desde una URL (promesa)
+function loadScript(url){
+  return new Promise((ok,err)=>{
+    const s=document.createElement('script');
+    s.src=url; s.onload=()=>ok(url); s.onerror=()=>err(url);
+    document.head.appendChild(s);
+  });
+}
+// Intenta una lista de CDN en cascada hasta que uno funcione
+async function loadFromAny(urls,name){
+  for(const u of urls){
+    try{ await loadScript(u); return u; }
+    catch(e){ console.warn('Falló CDN:',u); }
+  }
+  throw new Error('Ningún CDN disponible para '+name);
+}
+
+const TF_CDNS=[
+  'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js',
+  'https://unpkg.com/@tensorflow/tfjs@4.22.0/dist/tf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.22.0/tf.min.js'
+];
+const COCO_CDNS=[
+  'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js',
+  'https://unpkg.com/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js'
+];
+
+// Carga el modelo con reintentos (los pesos vienen de storage.googleapis.com)
+async function loadModelRetry(tries=3){
+  for(let i=1;i<=tries;i++){
+    try{
+      $('status').innerHTML='<span class="spin"></span>Inicializando modelo (intento '+i+' de '+tries+')…';
+      return await cocoSsd.load({base:'lite_mobilenet_v2'});
+    }catch(e){
+      console.warn('Intento '+i+' falló:',e);
+      if(i===tries) throw e;
+      await new Promise(r=>setTimeout(r,1200)); // espera y reintenta
+    }
+  }
+}
+
+async function boot(){
+  try{
+    $('status').innerHTML='<span class="spin"></span>Descargando TensorFlow.js…';
+    await loadFromAny(TF_CDNS,'TensorFlow.js');
+    $('status').innerHTML='<span class="spin"></span>Descargando código COCO-SSD…';
+    await loadFromAny(COCO_CDNS,'COCO-SSD');
+    model=await loadModelRetry(3);
+    $('status').innerHTML='Modelo listo. <b>Carga tus imágenes para comenzar.</b>';
+    $('analyze').disabled=false;
+  }catch(e){
+    const msg=(e&&e.message)||String(e);
+    const isFetch=/fetch|network|load/i.test(msg);
+    $('status').innerHTML='<b style="color:var(--no)">No se pudo cargar el modelo.</b> '+
+      '<button class="ghost" style="width:auto;display:inline-block;padding:4px 10px;margin-left:8px" onclick="boot()">Reintentar</button><br>'+
+      '<span style="font-size:11px;color:var(--muted)">Detalle: '+msg+'<br>'+
+      (isFetch
+        ? 'El navegador no pudo descargar los datos del modelo (storage.googleapis.com). '+
+          'Casi siempre es <b>una extensión bloqueadora</b> (uBlock, AdBlock, Brave Shields, antivirus web). '+
+          'Solución rápida: abre este archivo en una <b>ventana de incógnito</b> (Ctrl+Shift+N), donde las extensiones están apagadas. '+
+          'Si funciona ahí, desactiva el bloqueador para este archivo. También puedes probar en Chrome.'
+        : 'Recarga la página o pulsa Reintentar.')+
+      '</span>';
+    console.error(e);
+  }
+}
+boot();
+
+const drop=$('drop'),fileInput=$('file');
+let files=[];
+drop.onclick=()=>fileInput.click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};
+drop.ondragleave=()=>drop.classList.remove('over');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files);};
+fileInput.onchange=e=>addFiles(e.target.files);
+function addFiles(fl){files=[...files,...[...fl].filter(f=>f.type.startsWith('image/'))];drop.innerHTML=`${files.length} imágenes en cola<br><span style="font-size:10px">clic para agregar más</span>`;}
+
+$('analyze').onclick=async()=>{
+  if(!model||!files.length)return;
+  $('analyze').disabled=true;$('barwrap').style.display='block';
+  results=[];$('grid').innerHTML='';
+  for(let i=0;i<files.length;i++){
+    $('status').innerHTML=`<span class="spin"></span>Analizando ${i+1} de ${files.length}…`;
+    $('bar').style.width=((i+1)/files.length*100)+'%';
+    await analyzeOne(files[i]);
+  }
+  $('status').innerHTML=`Listo. <b>${results.length} imágenes analizadas.</b>`;
+  $('csv').disabled=false;$('clear').disabled=false;$('analyze').disabled=false;
+  $('barwrap').style.display='none';
+};
+
+function analyzeOne(file){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=async()=>{
+      const minScore=parseFloat($('conf').value);
+      let preds=await model.detect(img,20,minScore);
+      const persons=preds.filter(p=>p.class==='person');
+      const iw=img.naturalWidth, ih=img.naturalHeight, area=iw*ih;
+      // persona principal = caja de mayor área
+      let main=null,mainCov=0;
+      persons.forEach(p=>{const a=p.bbox[2]*p.bbox[3]; if(a>mainCov){mainCov=a;main=p;}});
+      const rec={
+        file:file.name, w:iw, h:ih,
+        nPersons:persons.length,
+        coverage: main? (mainCov/area):0,
+        relHeight: main? (main.bbox[3]/ih):0,
+        relWidth: main? (main.bbox[2]/iw):0,
+        bbox: main? main.bbox:null,
+        thumb: makeThumb(img, persons)
+      };
+      results.push(rec);
+      renderCard(rec);
+      res();
+    };
+    img.src=URL.createObjectURL(file);
+  });
+}
+
+function makeThumb(img,persons){
+  const max=230, sc=Math.min(max/img.naturalWidth,max/img.naturalHeight,1);
+  const c=document.createElement('canvas');
+  c.width=img.naturalWidth*sc; c.height=img.naturalHeight*sc;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img,0,0,c.width,c.height);
+  persons.forEach(p=>{
+    const[x,y,w,h]=p.bbox;
+    ctx.strokeStyle='#d4a843';ctx.lineWidth=2;
+    ctx.strokeRect(x*sc,y*sc,w*sc,h*sc);
+  });
+  return c;
+}
+
+function classify(r){
+  const reqSolo=$('reqSolo').checked, reqProt=$('reqProt').checked;
+  const covMin=parseFloat($('cov').value)/100;
+  const fullT=parseFloat($('full').value)/100;
+  const zoomT=parseFloat($('zoom').value)/100;
+
+  const solo = r.nPersons===1;
+  const hasBody = r.nPersons>=1;
+  const protag = r.coverage>=covMin;
+
+  // encuadre
+  let enc='SIN CUERPO';
+  if(hasBody){
+    if(r.coverage>=zoomT) enc='DETALLE / ZOOM';
+    else if(r.relHeight>=fullT) enc='CUERPO COMPLETO';
+    else if(r.relHeight>=0.40) enc='MEDIO CUERPO';
+    else if(r.coverage>=covMin) enc='PRIMER PLANO';
+    else enc='CUERPO SECUNDARIO';
+  }
+
+  let verdict='INCLUIR';
+  if(!hasBody) verdict='DESCARTAR';
+  if(reqSolo && !solo) verdict='DESCARTAR';
+  if(reqProt && !protag) verdict='DESCARTAR';
+
+  return {solo,hasBody,protag,enc,verdict};
+}
+
+function renderCard(r){
+  const c=classify(r);
+  const div=document.createElement('div');
+  div.className='card '+c.verdict.toLowerCase();
+  div.dataset.file=r.file;
+  const wrap=document.createElement('div');wrap.className='cvwrap';
+  wrap.appendChild(r.thumb.cloneNode(true));
+  // re-draw thumb (canvas clone doesn't copy bitmap) → just append original
+  wrap.innerHTML='';wrap.appendChild(r.thumb);
+  const v=document.createElement('div');v.className='verdict '+c.verdict.toLowerCase();v.textContent=c.verdict;
+  wrap.appendChild(v);
+  div.appendChild(wrap);
+  const meta=document.createElement('div');meta.className='meta';
+  meta.innerHTML=`
+    <div class="fn">${r.file}</div>
+    <div class="row"><span>Personas</span><b>${r.nPersons}</b></div>
+    <div class="row"><span>Cobertura</span><b>${(r.coverage*100).toFixed(1)}%</b></div>
+    <div class="row"><span>Altura rel.</span><b>${(r.relHeight*100).toFixed(0)}%</b></div>
+    <span class="encbadge">${c.enc}</span>
+    <div class="crit">
+      <span class="ck ${c.solo?'y':'n'}">sola</span>
+      <span class="ck ${c.protag?'y':'n'}">protag</span>
+    </div>`;
+  div.appendChild(meta);
+  $('grid').appendChild(div);
+  updateCounts();
+}
+
+function reclassify(){
+  $('grid').innerHTML='';
+  results.forEach(renderCard);
+}
+
+function updateCounts(){
+  const cards=[...document.querySelectorAll('.card')];
+  const ins=cards.filter(c=>c.classList.contains('incluir')).length;
+  $('cTotal').textContent=results.length;
+  $('cIn').textContent=ins;
+  $('cOut').textContent=results.length-ins;
+}
+
+$('csv').onclick=()=>{
+  let rows=[['archivo','ancho','alto','n_personas','persona_sola','cobertura_%','altura_rel_%','protagonista','encuadre','veredicto']];
+  results.forEach(r=>{
+    const c=classify(r);
+    rows.push([r.file,r.w,r.h,r.nPersons,c.solo?'SI':'NO',(r.coverage*100).toFixed(1),(r.relHeight*100).toFixed(0),c.protag?'SI':'NO',c.enc,c.verdict]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='filtrado_cuerpos.csv';a.click();
+};
+
+$('clear').onclick=()=>{
+  results=[];files=[];$('grid').innerHTML='';updateCounts();
+  drop.innerHTML='Arrastra imágenes aquí<br>o haz clic para elegir<br><span style="font-size:10px">(JPG / PNG · sin límite)</span>';
+  $('csv').disabled=true;$('clear').disabled=true;
+  $('status').innerHTML='Modelo listo. <b>Carga tus imágenes para comenzar.</b>';
+};
+</script>
+</body>
+</html>
