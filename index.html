@@ -149,6 +149,7 @@
       <input type="file" id="file" accept="image/*" multiple hidden>
       <button id="analyze" disabled>Analizar lote</button>
       <button id="csv" class="ghost" disabled>Exportar Excel</button>
+      <button id="json" class="ghost" disabled>Exportar JSON</button>
       <button id="clear" class="ghost" disabled>Limpiar</button>
       <div class="barwrap" id="barwrap"><div class="bar" id="bar"></div></div>
     </div>
@@ -274,7 +275,7 @@ $('analyze').onclick=async()=>{
     await analyzeOne(files[i]);
   }
   $('status').innerHTML=`Listo. <b>${results.length} imágenes analizadas.</b>`;
-  $('csv').disabled=false;$('clear').disabled=false;$('analyze').disabled=false;
+  $('csv').disabled=false;$('json').disabled=false;$('clear').disabled=false;$('analyze').disabled=false;
   $('barwrap').style.display='none';
 };
 
@@ -389,24 +390,32 @@ function updateCounts(){
   $('cOut').textContent=results.length-ins;
 }
 
-$('csv').onclick=()=>{
+function buildRows(){
   const header=['Cuenta','Imagen','Ancho','Alto','N personas','Persona sola','Cobertura %','Altura rel %','Protagonista','Encuadre','Veredicto'];
   const data=results.map(r=>{
     const c=classify(r);
     const cuenta=(r.file.split('_')[0]||'').replace(/\.[^.]+$/,'');
     return [cuenta,r.file,r.w,r.h,r.nPersons,c.solo?'SÍ':'NO',+(r.coverage*100).toFixed(1),+(r.relHeight*100).toFixed(0),c.protag?'SÍ':'NO',c.enc,c.verdict];
   });
+  return {header,data};
+}
+
+$('csv').onclick=()=>{
+  const {header,data}=buildRows();
   const aoa=[header,...data];
 
-  // Respaldo CSV si SheetJS no cargó
+  // Respaldo CSV (separador ';' para Excel en español) si SheetJS no cargó
   if(typeof XLSX==='undefined'){
-    const csv=aoa.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+    const csv=aoa.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='filtrado_cuerpos.csv';a.click();
     return;
   }
 
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  // .xlsx con cada dato en su celda y tipos correctos (número/texto)
+  const ws=XLSX.utils.aoa_to_sheet([header]); // encabezado primero
+  // agregamos filas con tipos explícitos
+  XLSX.utils.sheet_add_aoa(ws, data, {origin:'A2'});
   ws['!cols']=[{wch:9},{wch:15},{wch:8},{wch:8},{wch:11},{wch:13},{wch:11},{wch:12},{wch:13},{wch:18},{wch:12}];
   ws['!freeze']={xSplit:0,ySplit:1};
   const wb=XLSX.utils.book_new();
@@ -414,10 +423,49 @@ $('csv').onclick=()=>{
   XLSX.writeFile(wb,'filtrado_cuerpos.xlsx');
 };
 
+$('json').onclick=()=>{
+  // JSON estructurado: un objeto por imagen con claves nombradas
+  const out=results.map(r=>{
+    const c=classify(r);
+    const cuenta=(r.file.split('_')[0]||'').replace(/\.[^.]+$/,'');
+    return {
+      cuenta,
+      imagen:r.file,
+      ancho:r.w,
+      alto:r.h,
+      n_personas:r.nPersons,
+      persona_sola:c.solo,
+      cobertura_pct:+(r.coverage*100).toFixed(1),
+      altura_rel_pct:+(r.relHeight*100).toFixed(0),
+      protagonista:c.protag,
+      encuadre:c.enc,
+      veredicto:c.verdict
+    };
+  });
+  const payload={
+    proyecto:'Chile Íntimo · Taller DATA 01-2026',
+    generado:new Date().toISOString(),
+    total:out.length,
+    incluidas:out.filter(o=>o.veredicto==='INCLUIR').length,
+    descartadas:out.filter(o=>o.veredicto==='DESCARTAR').length,
+    parametros:{
+      confianza_min:parseFloat($('conf').value),
+      cobertura_min_pct:parseFloat($('cov').value),
+      umbral_cuerpo_completo_pct:parseFloat($('full').value),
+      umbral_zoom_pct:parseFloat($('zoom').value),
+      exige_persona_sola:$('reqSolo').checked,
+      exige_protagonista:$('reqProt').checked
+    },
+    imagenes:out
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='filtrado_cuerpos.json';a.click();
+};
+
 $('clear').onclick=()=>{
   results=[];files=[];$('grid').innerHTML='';updateCounts();
   drop.innerHTML='Arrastra imágenes aquí<br>o haz clic para elegir<br><span style="font-size:10px">(JPG / PNG · sin límite)</span>';
-  $('csv').disabled=true;$('clear').disabled=true;
+  $('csv').disabled=true;$('json').disabled=true;$('clear').disabled=true;
   $('status').innerHTML='Modelo listo. <b>Carga tus imágenes para comenzar.</b>';
 };
 </script>
